@@ -167,6 +167,12 @@ class AntigravityCredentialManager:
             f"{self._current_credential_account.get('email', 'unknown')}"
         )
 
+    async def force_rotate_credential(self):
+        """强制轮换到下一个凭证（用于错误处理）"""
+        async with self._operation_lock:
+            await self._rotate_credential()
+            log.info("Forced credential rotation due to error")
+
     async def _load_current_credential(self) -> Optional[Dict[str, Any]]:
         """加载当前凭证"""
         try:
