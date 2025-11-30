@@ -4871,23 +4871,52 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
         };
 
         // 数据缓存管理（减少不必要的服务器请求）
+        // TTL 默认 60 秒，将从配置文件 panel_cache_ttl 读取（单位：秒）
         let dataCache = {
             credsStatus: {
                 data: null,
                 timestamp: 0,
-                ttl: 60000  // 缓存有效期：60秒
+                ttl: 60000  // 默认：60秒（毫秒）
             },
             usageStats: {
                 data: null,
                 timestamp: 0,
-                ttl: 60000  // 缓存有效期：60秒
+                ttl: 60000
             },
             config: {
                 data: null,
                 timestamp: 0,
-                ttl: 60000  // 缓存有效期：60秒
+                ttl: 60000
             }
         };
+
+        // 更新所有缓存的 TTL（从配置中读取）
+        function updateCacheTTL(ttlSeconds) {
+            const ttlMs = ttlSeconds * 1000;  // 秒转毫秒
+            dataCache.credsStatus.ttl = ttlMs;
+            dataCache.usageStats.ttl = ttlMs;
+            dataCache.config.ttl = ttlMs;
+            console.log(`缓存 TTL 已更新为: ${ttlSeconds} 秒 (${ttlMs} 毫秒)`);
+        }
+
+        // 初始化缓存 TTL（登录后立即调用）
+        async function initializeCacheTTL() {
+            try {
+                const response = await fetch('/config/get', {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.config && data.config.panel_cache_ttl && data.config.panel_cache_ttl > 0) {
+                        updateCacheTTL(data.config.panel_cache_ttl);
+                    }
+                }
+            } catch (error) {
+                console.warn('初始化缓存 TTL 失败，使用默认值:', error);
+            }
+        }
 
         // 缓存工具函数
         function isCacheValid(cacheKey) {
@@ -4980,6 +5009,9 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                     // 移除玻璃态背景
                     document.body.classList.remove('login-active');
                     showStatus('登录成功', 'success');
+
+                    // 立即加载配置以获取缓存 TTL 设置
+                    initializeCacheTTL();
                 } else {
                     console.log('Login failed:', data);
                     showStatus(`登录失败: ${data.detail || data.error || '未知错误'}`, 'error');
@@ -6321,6 +6353,11 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                     currentConfig = cachedData.config;
                     envLockedFields = new Set(cachedData.env_locked || []);
 
+                    // 更新缓存 TTL（如果配置中有 panel_cache_ttl）
+                    if (currentConfig.panel_cache_ttl && currentConfig.panel_cache_ttl > 0) {
+                        updateCacheTTL(currentConfig.panel_cache_ttl);
+                    }
+
                     // 使用缓存数据渲染
                     populateConfigForm();
                     configForm.classList.remove('hidden');
@@ -6345,6 +6382,11 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                     setCache('config', data);
                     currentConfig = data.config;
                     envLockedFields = new Set(data.env_locked || []);
+
+                    // 更新缓存 TTL（如果配置中有 panel_cache_ttl）
+                    if (currentConfig.panel_cache_ttl && currentConfig.panel_cache_ttl > 0) {
+                        updateCacheTTL(currentConfig.panel_cache_ttl);
+                    }
 
                     populateConfigForm();
                     configForm.classList.remove('hidden');
