@@ -4244,7 +4244,7 @@
                     </div>
 
                     <div class="manage-actions">
-                        <button class="refresh-btn" onclick="refreshIPStats()">刷新统计</button>
+                        <button class="refresh-btn" onclick="refreshIPStats(true)">刷新统计</button>
                         <button class="refresh-btn" id="sortByTodayBtn" onclick="sortIPListBy('today')">今日请求</button>
                         <button class="refresh-btn" id="sortByTotalBtn" onclick="sortIPListBy('total')">历史请求</button>
                         <button class="refresh-btn" id="modelCreditsBtn" onclick="openModelCreditsModal()">积分配置</button>
@@ -4883,6 +4883,11 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                 timestamp: 0,
                 ttl: 60000
             },
+            ipStats: {
+                data: null,
+                timestamp: 0,
+                ttl: 60000
+            },
             config: {
                 data: null,
                 timestamp: 0,
@@ -4895,6 +4900,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
             const ttlMs = ttlSeconds * 1000;  // 秒转毫秒
             dataCache.credsStatus.ttl = ttlMs;
             dataCache.usageStats.ttl = ttlMs;
+            dataCache.ipStats.ttl = ttlMs;
             dataCache.config.ttl = ttlMs;
             console.log(`缓存 TTL 已更新为: ${ttlSeconds} 秒 (${ttlMs} 毫秒)`);
         }
@@ -8068,13 +8074,34 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
         }
 
         // 刷新 IP 统计
-        async function refreshIPStats() {
+        async function refreshIPStats(forceRefresh = false) {
             const ipLoading = document.getElementById('ipLoading');
             const ipList = document.getElementById('ipList');
 
             try {
+                // 检查缓存（除非强制刷新）
+                if (!forceRefresh && isCacheValid('ipStats')) {
+                    console.log('使用缓存数据（IP统计）');
+                    const cachedData = getCache('ipStats');
+
+                    // 使用缓存数据渲染
+                    document.getElementById('totalIPs').textContent = cachedData.summaryData.total_ips || 0;
+                    document.getElementById('activeIPs').textContent = cachedData.summaryData.active_ips || 0;
+                    document.getElementById('bannedIPs').textContent = cachedData.summaryData.banned_ips || 0;
+                    document.getElementById('rateLimitedIPs').textContent = cachedData.summaryData.rate_limited_ips || 0;
+                    document.getElementById('totalIPRequests').textContent = cachedData.summaryData.total_requests || 0;
+
+                    allIPsData = cachedData.statsData || {};
+                    renderIPList();
+
+                    ipLoading.style.display = 'none';
+                    return;
+                }
+
                 ipLoading.style.display = 'block';
                 ipList.innerHTML = '';
+
+                console.log('从服务器获取最新数据（IP统计）...');
 
                 // 获取 IP 统计数据
                 const [statsResponse, summaryResponse] = await Promise.all([
@@ -8092,6 +8119,12 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                 const summaryData = await summaryResponse.json();
 
                 if (statsResponse.ok && summaryResponse.ok) {
+                    // 保存到缓存
+                    setCache('ipStats', {
+                        statsData: statsData.data,
+                        summaryData: summaryData.data
+                    });
+
                     // 更新概览统计
                     document.getElementById('totalIPs').textContent = summaryData.data.total_ips || 0;
                     document.getElementById('activeIPs').textContent = summaryData.data.active_ips || 0;
@@ -8417,7 +8450,8 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
 
                     if (response.ok) {
                         showStatus(data.message, 'success');
-                        await refreshIPStats();
+                        clearCache('ipStats');  // 清除缓存
+                        await refreshIPStats(true);
                     } else {
                         showStatus(`操作失败: ${data.detail || data.error || '未知错误'}`, 'error');
                     }
@@ -8447,7 +8481,8 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
 
                 if (response.ok) {
                     showStatus(data.message, 'success');
-                    await refreshIPStats();
+                    clearCache('ipStats');  // 清除缓存
+                    await refreshIPStats(true);
                 } else {
                     showStatus(`操作失败: ${data.detail || data.error || '未知错误'}`, 'error');
                 }
@@ -8560,7 +8595,8 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
 
                     if (response.ok) {
                         showStatus(data.message, 'success');
-                        await refreshIPStats();
+                        clearCache('ipStats');  // 清除缓存
+                        await refreshIPStats(true);
                     } else {
                         showStatus(`操作失败: ${data.detail || data.error || '未知错误'}`, 'error');
                     }
@@ -8598,7 +8634,8 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
 
                 if (response.ok) {
                     showStatus(data.message, 'success');
-                    await refreshIPStats();
+                    clearCache('ipStats');  // 清除缓存
+                    await refreshIPStats(true);
                 } else {
                     showStatus(`操作失败: ${data.detail || data.error || '未知错误'}`, 'error');
                 }
