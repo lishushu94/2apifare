@@ -78,6 +78,8 @@ def _extract_error_code_from_exception(error_message: str) -> int:
         return 429
     elif "500" in error_message:
         return 500
+    elif "400" in error_message or "400 Bad Request" in error_message:
+        return 400
     return None
 
 

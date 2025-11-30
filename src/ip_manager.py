@@ -475,13 +475,13 @@ class IPManager:
 
     async def _load_ban_operations(self) -> Dict[str, Any]:
         """
-        从文件加载封禁操作记录，并自动清理超过30分钟的记录（懒清理）
+        从文件加载封禁操作记录，并自动清理超过1小时的记录（懒清理）
 
         Returns:
             封禁操作记录字典 {"operators": {operator_ip: [timestamp1, timestamp2, ...]}}
         """
         current_time = time.time()
-        time_window = 1800  # 30分钟 = 1800秒
+        time_window = 3600  # 1小时 = 3600秒
 
         try:
             if os.path.exists(self._ban_operations_file):
@@ -491,12 +491,12 @@ class IPManager:
             else:
                 ban_data = {"operators": {}}
 
-            # 懒清理：移除所有超过30分钟的记录
+            # 懒清理：移除所有超过1小时的记录
             cleaned_operators = {}
             removed_count = 0
 
             for operator_ip, timestamps in ban_data.get("operators", {}).items():
-                # 过滤掉超过30分钟的时间戳
+                # 过滤掉超过1小时的时间戳
                 valid_timestamps = [ts for ts in timestamps if current_time - ts < time_window]
 
                 # 只保留还有有效记录的操作者
@@ -551,7 +551,7 @@ class IPManager:
             ban_data["operators"][operator_ip].append(time.time())
 
             await self._save_ban_operations(ban_data)
-            log.info(f"Recorded ban operation from {operator_ip} ({len(ban_data['operators'][operator_ip])}/5 in 30min)")
+            log.info(f"Recorded ban operation from {operator_ip} ({len(ban_data['operators'][operator_ip])}/3 in 1hr)")
 
         except Exception as e:
             log.error(f"Failed to record ban operation: {e}")
@@ -566,8 +566,8 @@ class IPManager:
         Returns:
             (是否允许, 错误信息)
         """
-        max_bans = 5  # 最多5次封禁操作
-        time_window = 1800  # 30分钟 = 1800秒
+        max_bans = 3  # 最多3次封禁操作
+        time_window = 3600  # 1小时 = 3600秒
 
         try:
             # 加载并自动清理过期记录
@@ -581,7 +581,7 @@ class IPManager:
                 oldest_timestamp = operator_records[0]
                 remaining_time = int(time_window - (time.time() - oldest_timestamp))
                 minutes = remaining_time // 60
-                return False, f"封禁操作过于频繁，请在 {minutes} 分钟后再试（30分钟内最多封禁5次）"
+                return False, f"封禁操作过于频繁，请在 {minutes} 分钟后再试（1小时内最多封禁3次）"
 
             return True, ""
 
@@ -616,12 +616,12 @@ class IPManager:
 
             # 封禁操作的额外检查
             if status == "banned":
-                # 检查1：今日请求少于50次不能被封禁（保护新用户体验）
+                # 检查1：今日请求少于80次不能被封禁（保护新用户体验）
                 if ip in self._ip_cache["ips"]:
                     today_requests = self._ip_cache["ips"][ip].get("today_requests", 0)
-                    if today_requests < 50:
-                        log.warning(f"Cannot ban IP {ip}: only {today_requests} requests today (minimum 50)")
-                        return False, f"今日请求仅 {today_requests} 次，少于50次不能封禁（保护新用户体验）"
+                    if today_requests < 80:
+                        log.warning(f"Cannot ban IP {ip}: only {today_requests} requests today (minimum 80)")
+                        return False, f"今日请求仅 {today_requests} 次，少于80次不能封禁（保护每位用户体验）"
 
                 # 检查2：操作者封禁频率限制
                 if operator_ip:
