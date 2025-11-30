@@ -40,13 +40,19 @@
         }
 
         .container {
-            background: rgba(25, 30, 40, 0.7);
+            background: rgba(25, 30, 40, 0.25);  /* 极度透明：0.5 → 0.25，背景清晰可见 */
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(15px);
+            backdrop-filter: blur(5px);  /* 减少模糊：15px → 5px，背景更清晰 */
+            -webkit-backdrop-filter: blur(5px);
             transition: all 0.5s ease;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);  /* 增强边框：0.08 → 0.15 */
+
+            /* 强制 GPU 加速，保持一致的透明效果 */
+            transform: translateZ(0);
+            will-change: backdrop-filter, transform;
+            isolation: isolate;
         }
 
         /* 登录状态下，container 变透明，让玻璃态登录卡片直接显示在背景上 */
@@ -109,11 +115,13 @@
             border-radius: 10px;
             font-size: 15px;
             box-sizing: border-box;
-            background: rgba(40, 50, 65, 0.6);
-            backdrop-filter: blur(8px);
+            background: rgba(40, 50, 65, 0.2);  /* 极度透明：0.4 → 0.2 */
+            backdrop-filter: blur(4px);  /* 减少模糊：8px → 4px */
+            -webkit-backdrop-filter: blur(4px);
             transition: all 0.3s ease;
             font-family: inherit;
             color: rgba(255, 255, 255, 0.9);
+            transform: translateZ(0);
         }
 
         input[type="text"]:focus,
@@ -204,11 +212,13 @@
         }
 
         .auth-url {
-            background: rgba(40, 50, 65, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(40, 50, 65, 0.2);  /* 极度透明：0.35 → 0.2 */
+            backdrop-filter: blur(4px);  /* 减少模糊：10px → 4px */
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);  /* 增强边框 */
             border-radius: 10px;
             padding: 18px 22px;
+            transform: translateZ(0);
             margin: 20px 0;
             word-break: break-all;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
@@ -231,11 +241,13 @@
         }
 
         .credentials {
-            background: rgba(35, 45, 60, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(110, 181, 255, 0.3);
+            background: rgba(35, 45, 60, 0.25);  /* 极度透明：0.5 → 0.25 */
+            backdrop-filter: blur(4px);  /* 减少模糊：10px → 4px */
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(110, 181, 255, 0.4);  /* 增强边框 */
             border-radius: 10px;
             padding: 18px 22px;
+            transform: translateZ(0);
             margin: 20px 0;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
@@ -661,11 +673,13 @@
 
         /* 文件管理样式 */
         .cred-card {
-            background: rgba(40, 50, 65, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(40, 50, 65, 0.2);  /* 极度透明：0.4 → 0.2 */
+            backdrop-filter: blur(4px);  /* 减少模糊：10px → 4px */
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);  /* 增强边框 */
             border-radius: 12px;
             padding: 18px 20px;
+            transform: translateZ(0);
             margin: 12px 0;
             position: relative;
             min-width: 600px;
@@ -793,14 +807,16 @@
         }
 
         .stat-item {
-            background: rgba(30, 40, 55, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(30, 40, 55, 0.2);  /* 极度透明：0.35 → 0.2 */
+            border: 1px solid rgba(255, 255, 255, 0.15);  /* 增强边框 */
             border-radius: 8px;
             padding: 12px 20px;
             text-align: center;
             min-width: 120px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(4px);  /* 减少模糊：8px → 4px */
+            -webkit-backdrop-filter: blur(4px);
+            transform: translateZ(0);
         }
 
         .stat-number {
@@ -844,13 +860,15 @@
 
         .filter-select {
             padding: 10px 14px;
-            border: 2px solid rgba(255, 255, 255, 0.12);
+            border: 2px solid rgba(255, 255, 255, 0.18);  /* 增强边框 */
             border-radius: 8px;
             font-size: 14px;
-            background: rgba(40, 50, 65, 0.6);
-            backdrop-filter: blur(8px);
+            background: rgba(40, 50, 65, 0.2);  /* 极度透明：0.4 → 0.2 */
+            backdrop-filter: blur(4px);  /* 减少模糊：8px → 4px */
+            -webkit-backdrop-filter: blur(4px);
             color: rgba(255, 255, 255, 0.9);
             transition: all 0.3s ease;
+            transform: translateZ(0);
         }
 
         .filter-select:focus {
@@ -1044,13 +1062,15 @@
 
         /* 配置管理样式 */
         .config-group {
-            background: rgba(40, 50, 65, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(40, 50, 65, 0.2);  /* 极度透明：0.35 → 0.2 */
+            border: 1px solid rgba(255, 255, 255, 0.18);  /* 增强边框 */
             border-radius: 12px;
             padding: 20px;
             margin: 15px 0;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);  /* 减少模糊：10px → 4px */
+            -webkit-backdrop-filter: blur(4px);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            transform: translateZ(0);
         }
 
         .config-group h4 {
@@ -1310,15 +1330,17 @@
 
         /* IP 统计卡片样式 */
         .ip-card {
-            background: rgba(40, 50, 65, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(40, 50, 65, 0.2);  /* 极度透明：0.35 → 0.2 */
+            border: 1px solid rgba(255, 255, 255, 0.18);  /* 增强边框 */
             border-radius: 12px;
             padding: 18px 20px;
             margin: 12px 0;
             position: relative;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);  /* 减少模糊：10px → 4px */
+            -webkit-backdrop-filter: blur(4px);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
+            transform: translateZ(0);
         }
 
         .ip-card:hover {
