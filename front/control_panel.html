@@ -8074,7 +8074,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
         }
 
         // 刷新 IP 统计
-        async function refreshIPStats(forceRefresh = false) {
+        async function refreshIPStats(forceRefresh = false, silent = false) {
             const ipLoading = document.getElementById('ipLoading');
             const ipList = document.getElementById('ipList');
 
@@ -8141,7 +8141,10 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                     // 渲染当前页
                     renderIPList();
 
-                    showStatus(`已加载 ${summaryData.data.total_ips} 个 IP 的统计数据`, 'success');
+                    // 只在非静默模式下显示提示
+                    if (!silent) {
+                        showStatus(`已加载 ${summaryData.data.total_ips} 个 IP 的统计数据`, 'success');
+                    }
                 } else {
                     showStatus('加载 IP 统计失败', 'error');
                 }
@@ -8455,7 +8458,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                         clearCache('ipStats');  // 清除缓存
                         // 延迟3.5秒再刷新，让第一个提示完全消失后再显示第二个
                         setTimeout(async () => {
-                            await refreshIPStats(true);
+                            await refreshIPStats(true, true);  // silent=true 不显示加载提示
                         }, 3500);
                     } else {
                         showStatus(`操作失败: ${data.detail || data.error || '未知错误'}`, 'error');
@@ -8630,7 +8633,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                         clearCache('ipStats');  // 清除缓存
                         // 延迟3.5秒再刷新，让第一个提示完全消失后再显示第二个
                         setTimeout(async () => {
-                            await refreshIPStats(true);
+                            await refreshIPStats(true, true);  // silent=true 不显示加载提示
                         }, 3500);
                     } else {
                         showStatus(`操作失败: ${data.detail || data.error || '未知错误'}`, 'error');
