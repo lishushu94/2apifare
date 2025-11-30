@@ -8420,7 +8420,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
 
             // 启用操作需要管理员密码验证
             if (status === 'active') {
-                const adminPassword = prompt(`启用 IP 需要管理员密码验证：\n\nIP: ${ip}\n请输入管理员密码：`);
+                const adminPassword = prompt(`启用 IP 需要管理员密码验证：\n\nIP: ${maskIP(ip)}\n请输入管理员密码：`);
 
                 // 如果用户取消输入
                 if (adminPassword === null) {
@@ -8463,7 +8463,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
             }
 
             // 封禁和限速操作无需密码，只需确认
-            if (!confirm(`确定要${statusNames[status]} IP ${ip} 吗？`)) {
+            if (!confirm(`确定要${statusNames[status]} IP ${maskIP(ip)} 吗？`)) {
                 return;
             }
 
@@ -8495,6 +8495,23 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
         // 生成安全的 IP ID（替换点号为下划线）
         function getSafeIPId(ip) {
             return ip.replace(/\./g, '_').replace(/:/g, '_');
+        }
+
+        // 隐藏IP后两段（隐私保护）
+        function maskIP(ip) {
+            if (!ip) return '***.***.***';
+            const parts = ip.split('.');
+            if (parts.length === 4) {
+                // IPv4: 显示前两段，后两段用***替代
+                return `${parts[0]}.${parts[1]}.***.***`;
+            } else if (ip.includes(':')) {
+                // IPv6: 显示前两段，其余用***替代
+                const v6parts = ip.split(':');
+                if (v6parts.length >= 2) {
+                    return `${v6parts[0]}:${v6parts[1]}:***:***`;
+                }
+            }
+            return '***.***.***';
         }
 
         // 刷新 IP 地理位置
@@ -8614,8 +8631,8 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
             if (currentRateLimit === 0 || requestsPerMin <= currentRequestsPerMin) {
                 const action = currentRateLimit > 0 ? '收紧限速' : '设置限速';
                 const confirmMsg = currentRateLimit > 0
-                    ? `确定要${action}吗？\n\nIP: ${ip}\n当前：${currentRequestsPerMin}次/分钟\n新设置：${requestsPerMin}次/分钟`
-                    : `确定要${action}吗？\n\nIP: ${ip}\n限速：${requestsPerMin}次/分钟`;
+                    ? `确定要${action}吗？\n\nIP: ${maskIP(ip)}\n当前：${currentRequestsPerMin}次/分钟\n新设置：${requestsPerMin}次/分钟`
+                    : `确定要${action}吗？\n\nIP: ${maskIP(ip)}\n限速：${requestsPerMin}次/分钟`;
 
                 if (!confirm(confirmMsg)) {
                     return;
