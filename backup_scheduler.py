@@ -56,30 +56,36 @@ class BackupScheduler:
         logger.info(f"服务启动时间: {china_time.strftime('%Y-%m-%d %H:%M:%S')} (UTC+8)")
         logger.info("等待下一个整点小时执行首次备份...")
 
+        last_backup_hour = -1  # 记录上次备份的小时，避免重复备份
+
         while self.running:
             try:
-                # 等待到下一个整点小时
+                # 获取当前时间
                 china_time = self._get_china_time()
+                current_hour = china_time.hour
                 current_minute = china_time.minute
                 current_second = china_time.second
 
-                # 计算距离下一个整点小时的秒数
+                # 如果当前是整点（0-2分钟内）且还没有在这个小时备份过
+                if current_minute <= 2 and current_hour != last_backup_hour:
+                    logger.info(f"到达整点 {current_hour}:00，执行备份")
+                    self._run_backup()
+                    last_backup_hour = current_hour
+                    # 等待3分钟，避免在同一小时内重复备份
+                    time.sleep(180)
+                    continue
+
+                # 计算距离下一个整点的秒数
                 seconds_to_next_hour = (60 - current_minute) * 60 - current_second
 
-                # 如果距离下一个小时不到5分钟，就等到下一个小时再备份
-                if seconds_to_next_hour < 300:  # 5分钟
-                    seconds_to_next_hour += 3600
-
-                logger.info(f"下次备份将在 {seconds_to_next_hour//60} 分钟后执行")
-
-                # 等待
-                for _ in range(int(seconds_to_next_hour)):
-                    if not self.running:
-                        break
-                    time.sleep(1)
-
-                if self.running:
-                    self._run_backup()
+                # 如果距离下一个整点超过5分钟，就等待到下一个整点前4分钟
+                if seconds_to_next_hour > 300:
+                    wait_time = seconds_to_next_hour - 240  # 提前4分钟醒来
+                    logger.info(f"下次备份将在 {wait_time//60} 分钟后执行（整点 {(current_hour+1)%24}:00）")
+                    time.sleep(wait_time)
+                else:
+                    # 距离整点不到5分钟，每30秒检查一次
+                    time.sleep(30)
 
             except Exception as e:
                 logger.error(f"调度器循环错误: {e}", exc_info=True)

@@ -132,13 +132,11 @@ class CredsBackup:
         self._run_git_command(["git", "config", "user.email", "backup@2apifare.local"])
 
     def _create_backup_path(self, china_time):
-        """创建备份路径：年/月/日/时"""
-        year = china_time.strftime("%Y")
-        month = china_time.strftime("%m")
-        day = china_time.strftime("%d")
-        hour = china_time.strftime("%H")
+        """创建备份路径：YYYYMMDD/HH（日期文件夹/小时文件夹）"""
+        date_str = china_time.strftime("%Y%m%d")  # 20251128
+        hour = china_time.strftime("%H")          # 00
 
-        backup_path = self.backup_repo_dir / year / month / day / hour
+        backup_path = self.backup_repo_dir / date_str / hour
         backup_path.mkdir(parents=True, exist_ok=True)
         return backup_path
 
@@ -165,43 +163,31 @@ class CredsBackup:
         return dest_file
 
     def _cleanup_old_backups(self, china_time):
-        """清理超过4天的旧备份（每天凌晨0点执行）"""
-        # 只在凌晨0点执行清理
-        if china_time.hour != 0:
-            return
+        """清理超过4天的旧备份（每次备份时都检查）"""
+        print("🗑️  检查是否需要清理旧备份...")
 
-        print("🗑️  执行每日清理任务...")
-
-        # 计算4天前的日期（凌晨0点）
-        cutoff_date = (china_time - timedelta(days=self.max_backup_days)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        # 计算4天前的日期
+        cutoff_date = china_time - timedelta(days=self.max_backup_days)
+        cutoff_date_str = cutoff_date.strftime("%Y%m%d")
 
         print(f"   清理截止日期: {cutoff_date.strftime('%Y-%m-%d')} (保留 {self.max_backup_days} 天)")
 
-        # 获取所有日期文件夹并统计
+        # 获取所有日期文件夹
         all_day_dirs = []
         deleted_days = []
 
-        for year_dir in self.backup_repo_dir.iterdir():
-            if not year_dir.is_dir() or year_dir.name.startswith('.'):
+        for day_dir in self.backup_repo_dir.iterdir():
+            if not day_dir.is_dir() or day_dir.name.startswith('.'):
                 continue
 
-            for month_dir in year_dir.iterdir():
-                if not month_dir.is_dir():
+            # 检查是否是日期文件夹（YYYYMMDD格式，8位数字）
+            if len(day_dir.name) == 8 and day_dir.name.isdigit():
+                try:
+                    # 验证是否是有效日期
+                    datetime.strptime(day_dir.name, "%Y%m%d")
+                    all_day_dirs.append(day_dir)
+                except:
                     continue
-
-                for day_dir in month_dir.iterdir():
-                    if not day_dir.is_dir():
-                        continue
-
-                    # 检查是否是日期文件夹
-                    try:
-                        dir_date_str = f"{year_dir.name}{month_dir.name}{day_dir.name}"
-                        dir_date = datetime.strptime(dir_date_str, "%Y%m%d")
-                        all_day_dirs.append((dir_date, day_dir, year_dir, month_dir))
-                    except:
-                        continue
 
         print(f"   当前总共有 {len(all_day_dirs)} 天的备份")
 
@@ -210,30 +196,15 @@ class CredsBackup:
             print(f"ℹ️  备份天数未超过 {self.max_backup_days} 天，无需清理")
             return
 
-        # 删除超过截止日期的备份
-        for dir_date, day_dir, year_dir, month_dir in all_day_dirs:
-            # 只删除严格早于截止日期的备份
-            if dir_date < cutoff_date:
+        # 删除超过截止日期的备份（简单的字符串比较即可）
+        for day_dir in all_day_dirs:
+            if day_dir.name <= cutoff_date_str:
                 try:
-                    print(f"   删除旧备份: {year_dir.name}/{month_dir.name}/{day_dir.name}")
+                    print(f"   删除旧备份: {day_dir.name}")
                     shutil.rmtree(day_dir)
-                    deleted_days.append(f"{year_dir.name}/{month_dir.name}/{day_dir.name}")
+                    deleted_days.append(day_dir.name)
                 except Exception as e:
-                    print(f"   ⚠️  删除失败 {day_dir}: {e}")
-
-                # 清理空的月份文件夹
-                try:
-                    if not any(month_dir.iterdir()):
-                        month_dir.rmdir()
-                except:
-                    pass
-
-            # 清理空的年份文件夹
-            try:
-                if not any(year_dir.iterdir()):
-                    year_dir.rmdir()
-            except:
-                pass
+                    print(f"   ⚠️  删除失败 {day_dir.name}: {e}")
 
         if deleted_days:
             print(f"✅ 已清理 {len(deleted_days)} 天的旧备份")
