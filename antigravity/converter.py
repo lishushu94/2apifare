@@ -259,7 +259,7 @@ def generate_generation_config(
         generationConfig 对象
     """
     config = {
-        'topP': parameters.get('top_p', 0.85),
+        'topP': parameters.get('top_p', 0.95),
         'topK': parameters.get('top_k', 50),
         'temperature': parameters.get('temperature', 1),
         'candidateCount': 1,
