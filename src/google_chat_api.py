@@ -308,8 +308,10 @@ async def send_gemini_request(
 
                         # 如果重试可用且未达到最大次数，进行重试
                         if retry_429_enabled and attempt < max_retries:
+                            # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
+                            delay = retry_interval * (2 ** attempt)
                             log.warning(
-                                f"[RETRY] 429 error encountered, retrying ({attempt + 1}/{max_retries})"
+                                f"[RETRY] 429 error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
                             )
                             if credential_manager:
                                 # 429错误时强制轮换凭证，不增加调用计数
@@ -320,7 +322,7 @@ async def send_gemini_request(
                                 )
                                 if next_cred_result:
                                     current_file, credential_data, headers, final_post_data, target_url = next_cred_result
-                            await asyncio.sleep(retry_interval)
+                            await asyncio.sleep(delay)
                             continue  # 跳出内层处理，继续外层循环重试
                         else:
                             # 返回429错误流
@@ -446,8 +448,10 @@ async def send_gemini_request(
 
                         # 如果重试可用且未达到最大次数，继续重试
                         if retry_429_enabled and attempt < max_retries:
+                            # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
+                            delay = retry_interval * (2 ** attempt)
                             log.warning(
-                                f"[RETRY] 429 error encountered, retrying ({attempt + 1}/{max_retries})"
+                                f"[RETRY] 429 error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
                             )
                             if credential_manager:
                                 # 429错误时强制轮换凭证，不增加调用计数
@@ -458,7 +462,7 @@ async def send_gemini_request(
                                 )
                                 if next_cred_result:
                                     current_file, credential_data, headers, final_post_data, target_url = next_cred_result
-                            await asyncio.sleep(retry_interval)
+                            await asyncio.sleep(delay)
                             continue
                         else:
                             log.error(f"[RETRY] Max retries exceeded for 429 error")
@@ -501,10 +505,12 @@ async def send_gemini_request(
 
         except Exception as e:
             if attempt < max_retries:
+                # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
+                delay = retry_interval * (2 ** attempt)
                 log.warning(
-                    f"[RETRY] Request failed with exception, retrying ({attempt + 1}/{max_retries}): {str(e)}"
+                    f"[RETRY] Request failed with exception, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries}): {str(e)}"
                 )
-                await asyncio.sleep(retry_interval)
+                await asyncio.sleep(delay)
                 continue
             else:
                 log.error(f"Request to Google API failed: {str(e)}")

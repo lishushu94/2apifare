@@ -777,10 +777,13 @@ async def handle_antigravity_request(request_data: ChatCompletionRequest):
                         should_retry = await _check_should_retry_antigravity(error_code, auto_ban_error_codes)
 
                         if should_retry and attempt < max_retries - 1:
+                            # 指数退避：base_delay * 2^attempt (0.5s, 1s, 2s, 4s...)
+                            base_delay = 0.5
+                            delay = base_delay * (2 ** attempt)
                             # 403/401 等错误：切换凭证并重试
-                            log.warning(f"[RETRY] {error_code} error encountered, rotating credential and retrying ({attempt + 1}/{max_retries})")
+                            log.warning(f"[RETRY] {error_code} error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})")
                             await ant_cred_mgr.force_rotate_credential()
-                            await asyncio.sleep(0.5)  # 短暂延迟后重试
+                            await asyncio.sleep(delay)
                             continue
                         else:
                             # 不可重试的错误，或者重试次数用尽

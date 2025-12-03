@@ -179,7 +179,12 @@ async def get_retry_429_enabled() -> bool:
 
 
 async def get_retry_429_interval() -> float:
-    """Get 429 retry interval in seconds."""
+    """Get 429 retry base delay in seconds (for exponential backoff).
+    
+    Note: This is now used as the BASE delay for exponential backoff.
+    Actual delay = base_delay * (2 ** attempt)
+    Example with base_delay=1.0: 1s, 2s, 4s, 8s...
+    """
     env_value = os.getenv("RETRY_429_INTERVAL")
     if env_value:
         try:
@@ -187,7 +192,7 @@ async def get_retry_429_interval() -> float:
         except ValueError:
             pass
 
-    return float(await get_config_value("retry_429_interval", 1))
+    return float(await get_config_value("retry_429_interval", 1.0))
 
 
 # ============================================================================
@@ -217,11 +222,16 @@ ANTIGRAVITY_BASE_MODELS = [
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
     "gemini-2.5-flash-thinking",
+    "gemini-2.5-computer-use-preview-10-2025",  # 内部名称: rev19-uic3-1p
     "gemini-3-pro-high",
     "gemini-3-pro-low",
     "gpt-oss-120b-medium",
-    "rev19-uic3-1p",
 ]
+
+# Antigravity 模型别名映射（用户友好名称 -> API内部名称）
+ANTIGRAVITY_MODEL_ALIAS = {
+    "gemini-2.5-computer-use-preview-10-2025": "rev19-uic3-1p",
+}
 
 # 已经包含特殊后缀的 Antigravity 模型（不再添加功能后缀）
 ANTIGRAVITY_SPECIAL_MODELS = [
