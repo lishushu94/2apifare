@@ -100,3 +100,6 @@ node_modules/
 # Antigravity nodejs project (should not be uploaded)
 docs/antigravity2api-nodejs/
 .backup_repo/
+
+# 嵌套的 git 仓库
+docs/new-api/
