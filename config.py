@@ -9,7 +9,8 @@ from typing import Any, Optional
 # Client Configuration
 
 # 需要自动封禁的错误码 (默认值，可通过环境变量或配置覆盖)
-AUTO_BAN_ERROR_CODES = [401, 403]
+# 404: 模型不存在或账号无权限访问该模型
+AUTO_BAN_ERROR_CODES = [401, 403, 404]
 
 # Default Safety Settings for Google API
 # 包含所有已知的安全分类，确保内容不被过滤
@@ -140,9 +141,9 @@ async def get_auto_ban_error_codes() -> list:
     """
     Get auto ban error codes.
 
-    Environment variable: AUTO_BAN_ERROR_CODES (comma-separated, e.g., "400,403")
+    Environment variable: AUTO_BAN_ERROR_CODES (comma-separated, e.g., "401,403,404")
     TOML config key: auto_ban_error_codes
-    Default: [400, 403]
+    Default: [401, 403, 404]
     """
     env_value = os.getenv("AUTO_BAN_ERROR_CODES")
     if env_value:

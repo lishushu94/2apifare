@@ -374,7 +374,7 @@ async def send_gemini_request(
 
                         # 5xx 服务器错误：不切换凭证，直接等待重试
                         if 500 <= resp.status_code < 600 and attempt < max_retries:
-                            # 指数退避：base_delay * 2^attempt (1.5s, 3s, 6s, 12s...)
+                            # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
                             delay = retry_interval * (2 ** attempt)
                             log.warning(
                                 f"[RETRY] Server error {resp.status_code}, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
@@ -386,8 +386,8 @@ async def send_gemini_request(
                         should_auto_ban = await _check_should_auto_ban(resp.status_code)
 
                         if should_auto_ban and credential_manager and attempt < max_retries:
-                            # 401/400 错误：先尝试刷新 token
-                            if resp.status_code in (400, 401):
+                            # 401/400/404 错误：先尝试刷新 token
+                            if resp.status_code in (400, 401, 404):
                                 log.warning(
                                     f"[AUTH REFRESH] {resp.status_code} error, attempting token refresh before retry ({attempt + 1}/{max_retries})"
                                 )
@@ -506,7 +506,7 @@ async def send_gemini_request(
                         if resp.status_code != 200:
                             # 5xx 服务器错误：不切换凭证，直接等待重试
                             if 500 <= resp.status_code < 600 and attempt < max_retries:
-                                # 指数退避：base_delay * 2^attempt (1.5s, 3s, 6s, 12s...)
+                                # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
                                 delay = retry_interval * (2 ** attempt)
                                 log.warning(
                                     f"[RETRY] Server error {resp.status_code}, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
@@ -524,8 +524,8 @@ async def send_gemini_request(
                                         current_file, False, resp.status_code
                                     )
 
-                                # 401/400 错误：先尝试刷新 token
-                                if resp.status_code in (400, 401):
+                                # 401/400/404 错误：先尝试刷新 token
+                                if resp.status_code in (400, 401, 404):
                                     log.warning(
                                         f"[AUTH REFRESH] {resp.status_code} error, attempting token refresh before retry ({attempt + 1}/{max_retries})"
                                     )

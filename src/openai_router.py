@@ -746,7 +746,10 @@ async def handle_antigravity_request(request_data: ChatCompletionRequest):
 
                             # 转换为 OpenAI 格式
                             openai_chunk = convert_sse_to_openai_format(chunk, base_model, stream_id, created)
-                            yield openai_chunk.encode()
+                            
+                            # 只发送非空内容（过滤掉 thinking 返回的空字符串）
+                            if openai_chunk:
+                                yield openai_chunk.encode()
 
                         # 发送结束块
                         finish_chunk = generate_finish_chunk(base_model, has_tool_calls, stream_id, created)
@@ -775,7 +778,7 @@ async def handle_antigravity_request(request_data: ChatCompletionRequest):
 
                         # 5xx 服务器错误：不切换凭证，直接等待重试
                         if error_code and 500 <= error_code < 600 and attempt < max_retries - 1:
-                            base_delay = 1.5
+                            base_delay = 1.0
                             delay = base_delay * (2 ** attempt)
                             log.warning(f"[RETRY] Server error {error_code}, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})")
                             await asyncio.sleep(delay)
@@ -785,8 +788,8 @@ async def handle_antigravity_request(request_data: ChatCompletionRequest):
                         should_retry = await _check_should_retry_antigravity(error_code, auto_ban_error_codes)
 
                         if should_retry and attempt < max_retries - 1:
-                            # 指数退避：base_delay * 2^attempt (1.5s, 3s, 6s, 12s...)
-                            base_delay = 1.5
+                            # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
+                            base_delay = 1.0
                             delay = base_delay * (2 ** attempt)
                             # 403/401 等错误：切换凭证并重试
                             log.warning(f"[RETRY] {error_code} error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})")
