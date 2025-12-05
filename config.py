@@ -69,16 +69,18 @@ def is_maxthinking_model(model_name):
 
 # Helper function to get thinking budget for a model
 def get_thinking_budget(model_name):
-    """Get the appropriate thinking budget for a model based on its name and variant."""
+    """
+    Get the appropriate thinking budget for a model based on its name and variant.
+
+    Google API支持的范围：512 - 24576
+    参考：https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini
+    """
 
     if is_nothinking_model(model_name):
-        return 128  # Limited thinking for pro
+        return 512  # 最小值（之前是 128，低于 API 最小值）
     elif is_maxthinking_model(model_name):
-        # Flash 模型使用较小的 thinking budget
-        base_model = get_base_model_name(get_base_model_from_feature_model(model_name))
-        if "flash" in base_model:
-            return 24576
-        return 32768
+        # 所有 maxthinking 模型都使用最大值
+        return 24576  # API 支持的最大值（之前 Pro 模型设置为 32768 超出范围）
     else:
         # Default thinking budget for regular models
         return None  # Default for all models

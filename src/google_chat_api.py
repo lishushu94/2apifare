@@ -307,11 +307,6 @@ async def send_gemini_request(
 
                         # 如果重试可用且未达到最大次数，进行重试
                         if retry_429_enabled and attempt < max_retries:
-                            # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
-                            delay = retry_interval * (2 ** attempt)
-                            log.warning(
-                                f"[RETRY] 429 error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
-                            )
                             if credential_manager:
                                 # 429错误时强制轮换凭证，不增加调用计数
                                 await credential_manager.force_rotate_credential()
@@ -321,22 +316,30 @@ async def send_gemini_request(
                                 )
                                 if next_cred_result:
                                     current_file, credential_data, headers, final_post_data, target_url = next_cred_result
-                            await asyncio.sleep(delay)
-                            continue  # 跳出内层处理，继续外层循环重试
+                                    # [FIX] 成功切换到新凭证，立即重试（新凭证可能有配额）
+                                    log.info(f"[RETRY] 429 error, switched to new credential, retrying immediately ({attempt + 1}/{max_retries})")
+                                    continue
+                                else:
+                                    # 没有其他可用凭证，指数退避
+                                    delay = retry_interval * (2 ** attempt)
+                                    log.warning(
+                                        f"[RETRY] 429 error, no other credentials available, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
+                                    )
+                                    await asyncio.sleep(delay)
+                                    continue
+                            else:
+                                # 没有凭证管理器，指数退避
+                                delay = retry_interval * (2 ** attempt)
+                                log.warning(
+                                    f"[RETRY] 429 error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
+                                )
+                                await asyncio.sleep(delay)
+                                continue
                         else:
-                            # 返回429错误流
-                            async def error_stream():
-                                error_response = {
-                                    "error": {
-                                        "message": "429 rate limit exceeded, max retries reached",
-                                        "type": "api_error",
-                                        "code": 429,
-                                    }
-                                }
-                                yield f"data: {json.dumps(error_response)}\n\n"
-
-                            return StreamingResponse(
-                                error_stream(), media_type="text/event-stream", status_code=429
+                            # [FIX] 返回普通 Response 而不是 StreamingResponse
+                            # 避免抗截断机制误判错误响应为需要续写的截断内容
+                            return _create_error_response(
+                                "429 rate limit exceeded, max retries reached", 429
                             )
                     elif resp.status_code != 200:
                         # 处理其他非200状态码的错误
@@ -381,12 +384,31 @@ async def send_gemini_request(
                             await asyncio.sleep(delay)
                             continue  # 使用同一凭证重试
 
-                        # 检查是否是自动封禁错误码（403, 401等）且可以重试
+                        # [FIX] 400 错误是参数错误，直接返回，不刷新 token
+                        if resp.status_code == 400:
+                            log.error(
+                                f"[BAD REQUEST] Invalid request parameters. Response: {response_content[:500]}"
+                            )
+                            # 清理资源
+                            try:
+                                await stream_ctx.__aexit__(None, None, None)
+                            except:
+                                pass
+                            try:
+                                await client.aclose()
+                            except:
+                                pass
+
+                            return _create_error_response(
+                                f"Invalid request: {response_content}", 400
+                            )
+
+                        # 检查是否是自动封禁错误码（403, 401, 404）且可以重试
                         should_auto_ban = await _check_should_auto_ban(resp.status_code)
 
                         if should_auto_ban and credential_manager and attempt < max_retries:
-                            # 401/400/404 错误：先尝试刷新 token
-                            if resp.status_code in (400, 401, 404):
+                            # 401/404 错误：先尝试刷新 token（可能是 token 过期）
+                            if resp.status_code in (401, 404):
                                 log.warning(
                                     f"[AUTH REFRESH] {resp.status_code} error, attempting token refresh before retry ({attempt + 1}/{max_retries})"
                                 )
@@ -395,6 +417,16 @@ async def send_gemini_request(
                                 if refresh_success:
                                     # Token 刷新成功，使用同一凭证重试
                                     log.info("[AUTH REFRESH] Token refreshed, retrying with same credential")
+                                    # 清理当前资源
+                                    try:
+                                        await stream_ctx.__aexit__(None, None, None)
+                                    except:
+                                        pass
+                                    try:
+                                        await client.aclose()
+                                    except:
+                                        pass
+
                                     # 重新准备请求头（使用刷新后的 token）
                                     next_cred_result = await _get_next_credential(
                                         credential_manager, payload, use_public_api, target_url
@@ -414,6 +446,16 @@ async def send_gemini_request(
                             # 禁用当前凭证并轮换
                             await _handle_auto_ban(credential_manager, resp.status_code, current_file)
 
+                            # [FIX] 清理当前资源（防止资源泄漏）
+                            try:
+                                await stream_ctx.__aexit__(None, None, None)
+                            except:
+                                pass
+                            try:
+                                await client.aclose()
+                            except:
+                                pass
+
                             # 获取下一个凭证
                             next_cred_result = await _get_next_credential(
                                 credential_manager, payload, use_public_api, target_url
@@ -430,21 +472,10 @@ async def send_gemini_request(
                             credential_manager, resp.status_code, response_content, current_file
                         )
 
-                        # 返回错误流
-                        async def error_stream():
-                            error_response = {
-                                "error": {
-                                    "message": f"API error: {resp.status_code}",
-                                    "type": "api_error",
-                                    "code": resp.status_code,
-                                }
-                            }
-                            yield f"data: {json.dumps(error_response)}\n\n"
-
-                        return StreamingResponse(
-                            error_stream(),
-                            media_type="text/event-stream",
-                            status_code=resp.status_code,
+                        # [FIX] 返回普通 Response 而不是 StreamingResponse
+                        # 避免抗截断机制误判错误响应为需要续写的截断内容
+                        return _create_error_response(
+                            f"API error: {resp.status_code}", resp.status_code
                         )
                     else:
                         # 成功响应，传递所有资源给流式处理函数管理
@@ -479,11 +510,6 @@ async def send_gemini_request(
 
                         # 如果重试可用且未达到最大次数，继续重试
                         if retry_429_enabled and attempt < max_retries:
-                            # 指数退避：base_delay * 2^attempt (1s, 2s, 4s, 8s...)
-                            delay = retry_interval * (2 ** attempt)
-                            log.warning(
-                                f"[RETRY] 429 error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
-                            )
                             if credential_manager:
                                 # 429错误时强制轮换凭证，不增加调用计数
                                 await credential_manager.force_rotate_credential()
@@ -493,8 +519,25 @@ async def send_gemini_request(
                                 )
                                 if next_cred_result:
                                     current_file, credential_data, headers, final_post_data, target_url = next_cred_result
-                            await asyncio.sleep(delay)
-                            continue
+                                    # [FIX] 成功切换到新凭证，立即重试（新凭证可能有配额）
+                                    log.info(f"[RETRY] 429 error, switched to new credential, retrying immediately ({attempt + 1}/{max_retries})")
+                                    continue
+                                else:
+                                    # 没有其他可用凭证，指数退避
+                                    delay = retry_interval * (2 ** attempt)
+                                    log.warning(
+                                        f"[RETRY] 429 error, no other credentials available, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
+                                    )
+                                    await asyncio.sleep(delay)
+                                    continue
+                            else:
+                                # 没有凭证管理器，指数退避
+                                delay = retry_interval * (2 ** attempt)
+                                log.warning(
+                                    f"[RETRY] 429 error encountered, waiting {delay:.1f}s before retry ({attempt + 1}/{max_retries})"
+                                )
+                                await asyncio.sleep(delay)
+                                continue
                         else:
                             log.error(f"[RETRY] Max retries exceeded for 429 error")
                             return _create_error_response(
@@ -513,7 +556,16 @@ async def send_gemini_request(
                                 await asyncio.sleep(delay)
                                 continue  # 使用同一凭证重试
 
-                            # 检查是否是自动封禁错误码（403, 401等）
+                            # [FIX] 400 错误是参数错误，直接返回，不刷新 token
+                            if resp.status_code == 400:
+                                log.error(
+                                    f"[BAD REQUEST] Invalid request parameters. Response: {resp.text[:500] if hasattr(resp, 'text') else 'N/A'}"
+                                )
+                                return _create_error_response(
+                                    f"Invalid request: {resp.text if hasattr(resp, 'text') else 'Bad Request'}", 400
+                                )
+
+                            # 检查是否是自动封禁错误码（403, 401, 404）
                             should_auto_ban = await _check_should_auto_ban(resp.status_code)
 
                             if should_auto_ban and credential_manager and attempt < max_retries:
@@ -523,8 +575,8 @@ async def send_gemini_request(
                                         current_file, False, resp.status_code
                                     )
 
-                                # 401/400/404 错误：先尝试刷新 token
-                                if resp.status_code in (400, 401, 404):
+                                # 401/404 错误：先尝试刷新 token（可能是 token 过期）
+                                if resp.status_code in (401, 404):
                                     log.warning(
                                         f"[AUTH REFRESH] {resp.status_code} error, attempting token refresh before retry ({attempt + 1}/{max_retries})"
                                     )
@@ -641,6 +693,8 @@ def _handle_streaming_response_managed(
 
             await _handle_api_error(credential_manager, resp.status_code, response_content, current_file)
 
+            # [FIX] 返回普通 Response 而不是 StreamingResponse
+            # 避免抗截断机制误判错误响应为需要续写的截断内容
             error_response = {
                 "error": {
                     "message": f"API error: {resp.status_code}",
@@ -648,11 +702,16 @@ def _handle_streaming_response_managed(
                     "code": resp.status_code,
                 }
             }
-            yield f"data: {json.dumps(error_response)}\n\n".encode("utf-8")
+            return Response(
+                content=json.dumps(error_response),
+                status_code=resp.status_code,
+                media_type="application/json",
+            )
 
-        return StreamingResponse(
-            cleanup_and_error(), media_type="text/event-stream", status_code=resp.status_code
-        )
+        # 不再使用 StreamingResponse 返回错误
+        # return StreamingResponse(
+        #     cleanup_and_error(), media_type="text/event-stream", status_code=resp.status_code
+        # )
 
     # 正常流式响应处理，确保资源在流结束时被清理
     async def managed_stream_generator():
