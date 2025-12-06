@@ -861,9 +861,19 @@ class AntigravityCredentialManager:
                 project_id = await self._fetch_project_id_from_api(account)
 
                 if not project_id:
-                    log.warning(f"Account {account.get('email', 'unknown')} has no Antigravity access (projectId not found)")
-                    # 标记账号无资格，但不禁用（可能是临时问题）
+                    email = account.get('email', 'unknown')
+                    log.warning(f"Account {email} has no Antigravity access (projectId not found)")
+                    # [FIX] 标记账号无资格并禁用，避免重复尝试
                     account['has_antigravity_access'] = False
+                    
+                    # 查找并禁用该账号
+                    for cred_entry in self._credential_accounts:
+                        if cred_entry.get('account', {}).get('email') == email:
+                            virtual_filename = cred_entry.get('virtual_filename')
+                            if virtual_filename:
+                                log.warning(f"[403] Disabling account {email} due to no Antigravity access")
+                                await self.disable_credential(virtual_filename)
+                            break
                     return
 
                 account['project_id'] = project_id
