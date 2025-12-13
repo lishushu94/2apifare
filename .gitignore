@@ -105,3 +105,8 @@ docs/AIClient-2-API/
 
 # 嵌套的 git 仓库
 docs/new-api/
+
+# 忽略 docs 目录下的所有内容，除了指定的图片
+docs/*
+!docs/xiwan.png
+!docs/1.jpg

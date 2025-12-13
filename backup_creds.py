@@ -273,17 +273,25 @@ class CredsBackup:
 
         except KeyboardInterrupt:
             print("\n⚠️  备份中断")
-            sys.exit(1)
+            raise  # 重新抛出异常，让调用者处理
         except Exception as e:
             print(f"\n❌ 备份失败: {e}")
             import traceback
             traceback.print_exc()
-            sys.exit(1)
+            raise  # 重新抛出异常，让调用者处理，不要杀死进程
 
 
 def main():
-    backup = CredsBackup()
-    backup.run()
+    """命令行入口：捕获异常并返回退出码"""
+    try:
+        backup = CredsBackup()
+        backup.run()
+    except KeyboardInterrupt:
+        print("\n⚠️  备份中断")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ 备份失败: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

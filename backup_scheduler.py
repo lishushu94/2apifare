@@ -34,18 +34,36 @@ class BackupScheduler:
         return datetime.now(china_tz)
 
     def _run_backup(self):
-        """执行备份任务"""
-        try:
-            china_time = self._get_china_time()
-            logger.info(f"开始执行定时备份 - {china_time.strftime('%Y-%m-%d %H:%M:%S')} (UTC+8)")
+        """执行备份任务（带重试机制）"""
+        china_time = self._get_china_time()
+        max_retries = 3
+        retry_delay = 60  # 失败后等待60秒再重试
 
-            backup = CredsBackup()
-            backup.run()
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(
+                    f"开始执行定时备份 (尝试 {attempt}/{max_retries}) - "
+                    f"{china_time.strftime('%Y-%m-%d %H:%M:%S')} (UTC+8)"
+                )
 
-            logger.info("定时备份完成")
+                backup = CredsBackup()
+                backup.run()
 
-        except Exception as e:
-            logger.error(f"定时备份失败: {e}", exc_info=True)
+                logger.info("✅ 定时备份完成")
+                return  # 成功则退出
+
+            except Exception as e:
+                logger.error(
+                    f"❌ 定时备份失败 (尝试 {attempt}/{max_retries}): {e}",
+                    exc_info=True
+                )
+
+                # 如果不是最后一次尝试，等待后重试
+                if attempt < max_retries:
+                    logger.info(f"等待 {retry_delay} 秒后重试...")
+                    time.sleep(retry_delay)
+                else:
+                    logger.error(f"❌ 备份失败，已达到最大重试次数 ({max_retries})，跳过本次备份")
 
     def _scheduler_loop(self):
         """调度器主循环"""
