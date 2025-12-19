@@ -1,0 +1,83 @@
+# 模型积分配置表
+# 积分范围：0.1（最低）- 1.0（最高）
+# 积分越高代表模型能力越强/成本越高
+# 每日请求消耗积分 = 请求次数 × 模型积分
+
+# ============================================================================
+# Antigravity 模型（ANT/ 前缀）
+# ============================================================================
+
+[antigravity]
+# Gemini 3 Pro 系列 - 最强模型，在19/20项基准测试中击败Claude（LiveCodeBench Pro: 2439 vs 1418, MMMU-Pro: 81% vs 68%）
+"ANT/gemini-3-pro-high" = 1.0
+"ANT/gemini-3-pro-low" = 0.95
+
+# Claude Opus 系列 - 最强大模型，顶级推理能力
+# 注意：只有 thinking 版本可用，普通版不存在
+"ANT/claude-opus-4-5-thinking" = 1.0  # Opus thinking版本，最强推理
+
+# Claude Sonnet 系列 - 高级模型，SWE-Bench优秀（77.2%），但综合性能略低于Gemini 3 Pro
+"ANT/claude-sonnet-4-5" = 0.85
+"ANT/claude-sonnet-4-5-thinking" = 0.9  # thinking版本推理能力更强
+
+# Gemini 2.5 Flash 系列 - 轻量快速模型
+"ANT/gemini-2.5-flash" = 0.3
+"ANT/gemini-2.5-flash-lite" = 0.25
+"ANT/gemini-2.5-flash-thinking" = 0.35
+
+# 其他模型
+"ANT/gemini-2.5-computer-use-preview-10-2025" = 0.5  # Computer Use 模型
+"ANT/gpt-oss-120b-medium" = 0.3
+
+
+# ============================================================================
+# GeminiCLI 基础模型
+# ============================================================================
+
+[geminicli]
+# Gemini 3 Pro Preview 系列 - 最新CLI模型
+"gemini-3-pro-preview" = 0.85
+"gemini-3-pro-preview-maxthinking" = 0.95
+"gemini-3-pro-preview-nothinking" = 0.80
+"gemini-3-pro-preview-search" = 0.90
+
+# Gemini 2.5 Pro 系列 - 中级模型，性价比高（定价$1.25/$10，SWE-bench 67.2%）
+"gemini-2.5-pro" = 0.5
+"gemini-2.5-pro-maxthinking" = 0.6  # thinking版本推理增强
+"gemini-2.5-pro-nothinking" = 0.45
+"gemini-2.5-pro-search" = 0.65  # 搜索版本附加能力
+
+# Gemini 2.5 Flash 系列 - 轻量快速模型，成本最低
+"gemini-2.5-flash" = 0.35
+"gemini-2.5-flash-maxthinking" = 0.4
+"gemini-2.5-flash-nothinking" = 0.3
+"gemini-2.5-flash-search" = 0.45
+
+# Gemini 2.5 Flash Lite 系列 - 超轻量模型，成本最低
+"gemini-2.5-flash-lite" = 0.25
+"gemini-2.5-flash-lite-maxthinking" = 0.30
+"gemini-2.5-flash-lite-nothinking" = 0.20
+"gemini-2.5-flash-lite-search" = 0.35
+
+
+# ============================================================================
+# 默认积分（未匹配到的模型使用此值）
+# ============================================================================
+
+[default]
+score = 0.5  # 中等积分
+
+
+# ============================================================================
+# 积分计算说明
+# ============================================================================
+#
+# 用户每日消耗积分 = Σ(模型调用次数 × 模型积分)
+#
+# 示例：
+# - 调用 ANT/claude-sonnet-4-5 10次 = 10 × 1.0 = 10.0 积分
+# - 调用 ANT/gemini-3-pro-high 20次 = 20 × 0.8 = 16.0 积分
+# - 调用 gemini-2.5-flash 100次 = 100 × 0.25 = 25.0 积分
+# - 总消耗：51.0 积分
+#
+# 可根据实际情况调整积分值和每日积分限额
