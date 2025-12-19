@@ -1671,12 +1671,18 @@ async def get_public_model_credits():
         credentials_dir = await config.get_credentials_dir()
         credits_toml_file = os.path.join(credentials_dir, "model_credits.toml")
 
-        # 如果配置文件不存在，直接读取 example 文件（无需复制）
+        # 如果配置文件不存在，尝试多个 fallback 位置
         if not os.path.exists(credits_toml_file):
-            example_file = os.path.join(credentials_dir, "model_credits.toml.example")
-            if os.path.exists(example_file):
-                credits_toml_file = example_file
-                log.info(f"使用默认配置文件: model_credits.toml.example")
+            # 优先级：creds目录 > Docker默认目录
+            fallback_paths = [
+                os.path.join(credentials_dir, "model_credits.toml.example"),
+                "/app/creds_defaults/model_credits.toml.example",  # Docker 镜像默认位置
+            ]
+            for fallback in fallback_paths:
+                if os.path.exists(fallback):
+                    credits_toml_file = fallback
+                    log.info(f"使用默认配置文件: {fallback}")
+                    break
             else:
                 raise HTTPException(status_code=404, detail="模型积分配置文件不存在")
 

@@ -55,16 +55,15 @@ requirements-dev.txt
 *.log
 log.txt
 
-# Credentials (never include actual credentials)
+# Credentials (never include actual credentials, but keep example files)
 creds/*.toml
 creds/*.json
-!creds/*.example
+!creds/model_credits.toml.example
+!creds/config.toml.example
 *.json
 !package.json
 *.toml
 !pyproject.toml
-!creds/model_credits.toml.example
-!creds/config.toml.example
 .env
 .env.*
 

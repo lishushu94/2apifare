@@ -28,6 +28,10 @@ COPY . .
 # Create creds directory for persistent data
 RUN mkdir -p /app/creds
 
+# Copy example files to a separate location (volume mount will override /app/creds)
+RUN mkdir -p /app/creds_defaults && \
+    cp -f /app/creds/*.example /app/creds_defaults/ 2>/dev/null || true
+
 # Declare volume for persistent data (credentials, config, guestbook)
 VOLUME ["/app/creds"]
 
