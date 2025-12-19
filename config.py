@@ -262,6 +262,8 @@ ANTIGRAVITY_BASE_MODELS = [
     "claude-sonnet-4-5",
     "claude-sonnet-4-5-thinking",
     "gemini-2.5-flash-lite",
+    "claude-opus-4-5",
+    "claude-opus-4-5-thinking",
     "gemini-2.5-flash",
     "gemini-2.5-flash-thinking",
     "gemini-2.5-computer-use-preview-10-2025",  # 内部名称: rev19-uic3-1p
@@ -278,6 +280,7 @@ ANTIGRAVITY_MODEL_ALIAS = {
 # 已经包含特殊后缀的 Antigravity 模型（不再添加功能后缀）
 ANTIGRAVITY_SPECIAL_MODELS = [
     "claude-sonnet-4-5-thinking",
+    "claude-opus-4-5-thinking",
     "gemini-2.5-flash-thinking",
 ]
 
