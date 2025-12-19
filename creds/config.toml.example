@@ -8,16 +8,16 @@
 # ================================================================
 
 # 聊天API访问密码（用于OpenAI和Gemini API端点认证）
-api_password = "your_api_password"
+api_password = "123456"
 
 # 控制面板访问密码（用于Web界面登录认证）
-panel_password = "your_panel_password"
+panel_password = "123456"
 
 # 管理员密码（用于配置管理和敏感操作）
-admin_password = "adm123"
+admin_password = "123456"
 
 # 通用访问密码（兼容性保留，优先级最高）
-password = "pwd"
+password = "123456"
 
 # ================================================================
 # 服务器配置
