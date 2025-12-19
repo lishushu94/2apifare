@@ -1671,8 +1671,14 @@ async def get_public_model_credits():
         credentials_dir = await config.get_credentials_dir()
         credits_toml_file = os.path.join(credentials_dir, "model_credits.toml")
 
+        # 如果配置文件不存在，直接读取 example 文件（无需复制）
         if not os.path.exists(credits_toml_file):
-            raise HTTPException(status_code=404, detail="模型积分配置文件不存在")
+            example_file = os.path.join(credentials_dir, "model_credits.toml.example")
+            if os.path.exists(example_file):
+                credits_toml_file = example_file
+                log.info(f"使用默认配置文件: model_credits.toml.example")
+            else:
+                raise HTTPException(status_code=404, detail="模型积分配置文件不存在")
 
         # 直接读取TOML文件并返回JSON（实时读取，支持动态价格表）
         with open(credits_toml_file, "r", encoding="utf-8") as f:
