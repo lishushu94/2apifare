@@ -827,13 +827,20 @@
             flex-wrap: wrap;
         }
 
+        /* IP 统计容器 - 桌面端一行 6 个 */
+        #ipStatsContainer {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+
         .stat-item {
             background: rgba(30, 40, 55, 0.2);  /* 极度透明：0.35 → 0.2 */
             border: 1px solid rgba(255, 255, 255, 0.15);  /* 增强边框 */
             border-radius: 8px;
             padding: 12px 20px;
             text-align: center;
-            min-width: 120px;
+            min-width: 100px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);  /* 减少模糊：8px → 4px */
             -webkit-backdrop-filter: blur(4px);
@@ -2151,6 +2158,26 @@
                 flex-wrap: nowrap;                /* 不换行 */
                 gap: 4px;                         /* 极小间距 */
                 margin-bottom: 8px;
+            }
+
+            /* IP 统计容器 - 手机端 2 行 3 个 */
+            #ipStatsContainer {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            #ipStatsContainer .stat-item {
+                padding: 10px 8px;
+                min-width: 0;
+            }
+
+            #ipStatsContainer .stat-number {
+                font-size: 18px;
+            }
+
+            #ipStatsContainer .stat-label {
+                font-size: 10px;
             }
 
             /* 使用统计 - 统计项单行显示 */
@@ -4161,6 +4188,10 @@
                         <div class="stat-item" style="border-left: 4px solid #ffc107;">
                             <span class="stat-number" id="rateLimitedIPs">0</span>
                             <span class="stat-label">限速 IP</span>
+                        </div>
+                        <div class="stat-item" style="border-left: 4px solid #17a2b8;">
+                            <span class="stat-number" id="todayIPRequests">0</span>
+                            <span class="stat-label">今日请求</span>
                         </div>
                         <div class="stat-item" style="border-left: 4px solid #6c757d;">
                             <span class="stat-number" id="totalIPRequests">0</span>
@@ -7950,6 +7981,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                     document.getElementById('activeIPs').textContent = cachedData.summaryData.active_ips || 0;
                     document.getElementById('bannedIPs').textContent = cachedData.summaryData.banned_ips || 0;
                     document.getElementById('rateLimitedIPs').textContent = cachedData.summaryData.rate_limited_ips || 0;
+                    document.getElementById('todayIPRequests').textContent = cachedData.summaryData.today_requests || 0;
                     document.getElementById('totalIPRequests').textContent = cachedData.summaryData.total_requests || 0;
 
                     allIPsData = cachedData.statsData || {};
@@ -7991,6 +8023,7 @@ docker run -e GCLI_CREDS_1='{"client_id":"..."}' \
                     document.getElementById('activeIPs').textContent = summaryData.data.active_ips || 0;
                     document.getElementById('bannedIPs').textContent = summaryData.data.banned_ips || 0;
                     document.getElementById('rateLimitedIPs').textContent = summaryData.data.rate_limited_ips || 0;
+                    document.getElementById('todayIPRequests').textContent = summaryData.data.today_requests || 0;
                     document.getElementById('totalIPRequests').textContent = summaryData.data.total_requests || 0;
 
                     // 保存所有 IP 数据
